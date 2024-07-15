@@ -1,7 +1,11 @@
 package com.CLI.ImageProcessing.service;
 
-public class ThirdPartyBackgroundRemovalService {
-    public void removeBackground(String image) {
-        System.out.println("Removing background from image " + image + " using third-party service");
+import com.CLI.ImageProcessing.Adapter.BackgroundRemovalService;
+
+public class ThirdPartyBackgroundRemovalService implements BackgroundRemovalService {
+
+    @Override
+    public void removeBackground(String imagePath) {
+        System.out.println("Removing background using Third Party Service 1 for " + imagePath);
     }
 }

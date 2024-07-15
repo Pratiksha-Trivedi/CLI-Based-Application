@@ -1,7 +1,10 @@
 package com.CLI.ImageProcessing.strategy;
+
 public class CreditCardPaymentStrategy implements PaymentStrategy {
+
     @Override
-    public void pay(double amount) {
-        System.out.println("Paying " + amount + " via Credit Card");
+    public void executePayment(double amount) {
+        // Implement credit card payment logic here
+        System.out.println("Paying Rs " + amount + " via Credit Card.");
     }
 }

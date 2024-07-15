@@ -8,10 +8,8 @@ import com.CLI.ImageProcessing.command.*;
 import com.CLI.ImageProcessing.decorator.CommandLoggingDecorator;
 import com.CLI.ImageProcessing.observer.ImageProcessingOperation;
 import com.CLI.ImageProcessing.observer.OperationLogger;
-import com.CLI.ImageProcessing.service.ThirdPartyBackgroundRemovalService;
-import com.CLI.ImageProcessing.strategy.CreditCardPaymentStrategy;
-import com.CLI.ImageProcessing.strategy.PayPalPaymentStrategy;
-import com.CLI.ImageProcessing.strategy.PaymentContext;
+import com.CLI.ImageProcessing.strategy.*;
+
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
@@ -20,8 +18,7 @@ public class ImageProcessingApplication {
 	public static void main(String[] args) {
 
 		ImageProcessingFacade facade = new ImageProcessingFacade();
-		BackgroundRemovalService backgroundRemovalService = new BackgroundRemovalServiceAdapter(new ThirdPartyBackgroundRemovalService());
-
+		BackgroundRemovalService backgroundRemovalService = new BackgroundRemovalServiceAdapter();
 		AIService aiService = new AIServiceImpl();
 
 		Command resizeCommand = new ResizeCommand("image.jpg", 800, 600);
@@ -29,36 +26,40 @@ public class ImageProcessingApplication {
 		Command cropCommand = new CropCommand("image.jpg", 10, 10, 50, 50);
 		Command removeBgCommand = new RemoveBackgroundCommand("image.jpg", backgroundRemovalService);
 
+		CompositeCommand compositeCommand = new CompositeCommand();
+		compositeCommand.addCommand(resizeCommand);
+		compositeCommand.addCommand(extendCommand);
+		compositeCommand.addCommand(cropCommand);
+		compositeCommand.addCommand(removeBgCommand);
+
+		CommandLoggingDecorator loggingCompositeCommand = new CommandLoggingDecorator(compositeCommand);
+
 		ImageProcessingOperation operation = new ImageProcessingOperation();
 		operation.addObserver(new OperationLogger());
 
-		CommandLoggingDecorator loggingResizeCommand = new CommandLoggingDecorator(resizeCommand);
-		CommandLoggingDecorator loggingExtendCommand = new CommandLoggingDecorator(extendCommand);
-		CommandLoggingDecorator loggingCropCommand = new CommandLoggingDecorator(cropCommand);
-		CommandLoggingDecorator loggingRemoveBgCommand = new CommandLoggingDecorator(removeBgCommand);
+		operation.executeOperation(loggingCompositeCommand);
 
-		operation.executeOperation(loggingResizeCommand);
-		operation.executeOperation(loggingExtendCommand);
-		operation.executeOperation(loggingCropCommand);
-		operation.executeOperation(loggingRemoveBgCommand);
+		StorageStrategy googleDriveStrategy = new GoogleDriveStorageStrategy();
+		StorageStrategy awsS3Strategy = new AwsS3StorageStrategy();
 
-		CompositeCommand compositeCommand = new CompositeCommand();
-		System.out.println("Combining two operations.......");
-		compositeCommand.addCommand(new RemoveBackgroundCommand("image.jpg", backgroundRemovalService));
-		compositeCommand.addCommand(new ResizeCommand("image.jpg", 800, 600));
-		facade.executeCommand(compositeCommand);
-
-		Command storeGoogleDriveCommand = new StoreCommand("google-drive", "/MyImages/result.jpg", "image.jpg", "image.jpg");
+		Command storeGoogleDriveCommand = new StoreCommand(googleDriveStrategy, "/MyImages/result.jpg", "image.jpg");
 		facade.executeCommand(storeGoogleDriveCommand);
 
-		Command storeS3Command = new StoreCommand("aws-s3", "mybucket", "result.jpg", "image.jpg");
+		Command storeS3Command = new StoreCommand(awsS3Strategy, "mybucket", "result.jpg");
 		facade.executeCommand(storeS3Command);
 
 		PaymentContext paymentContext = new PaymentContext();
-		paymentContext.setPaymentStrategy(new CreditCardPaymentStrategy());
-		paymentContext.executePayment(50.00);
 
+		paymentContext.setPricingStrategy(new ResizePricingStrategy());
+		paymentContext.setPaymentStrategy(new CreditCardPaymentStrategy());
+		paymentContext.executePayment();
+
+		paymentContext.setPricingStrategy(new ExtendPricingStrategy());
 		paymentContext.setPaymentStrategy(new PayPalPaymentStrategy());
-		paymentContext.executePayment(100.00);
+		paymentContext.executePayment();
+
+		paymentContext.setPricingStrategy(new BackgroundRemovalPricingStrategy());
+		paymentContext.setPaymentStrategy(new CreditCardPaymentStrategy());
+		paymentContext.executePayment();
 	}
 }

@@ -1,17 +1,21 @@
 package com.CLI.ImageProcessing.command;
-public class StoreCommand implements Command {
-    private String service;
-    private String path;
-    private String image;
 
-    public StoreCommand(String service, String path, String image, String img) {
-        this.service = service;
-        this.path = path;
-        this.image = image;
+import com.CLI.ImageProcessing.strategy.StorageStrategy;
+
+public class StoreCommand implements Command {
+
+    private StorageStrategy storageStrategy;
+    private String destination;
+    private String source;
+
+    public StoreCommand(StorageStrategy storageStrategy, String destination, String source) {
+        this.storageStrategy = storageStrategy;
+        this.destination = destination;
+        this.source = source;
     }
 
     @Override
     public void execute() {
-        System.out.println("Storing " + image + " to " + service + " at " + path);
+        storageStrategy.store(destination, source);
     }
 }
